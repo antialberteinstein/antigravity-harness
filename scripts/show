@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# ~/.gemini/scripts/show — mở ảnh, biểu đồ, PDF hay báo cáo HTML cho người dùng xem.
+# Agent gọi qua run_command:  show chart.png [report.html …]
+#
+# Trong kitty có bật remote control (biến KITTY_LISTEN_ON có giá trị): ảnh mở trong một cửa sổ
+# kitty mới bằng icat. Còn lại: mở bằng trình xem mặc định (open trên macOS, xdg-open trên Linux).
+# Bật remote control cho kitty, thêm vào kitty.conf:
+#   allow_remote_control socket-only
+#   listen_on unix:/tmp/kitty
+# Chạy được với bash 3.2.
+set -uo pipefail
+
+(( $# )) || { echo "Dùng: show <file>…" >&2; exit 2; }
+
+open_default() {
+  case "$(uname -s)" in
+    Darwin) open "$1" ;;
+    *) command -v xdg-open >/dev/null 2>&1 || { echo "Không có xdg-open để mở $1" >&2; return 1; }
+       xdg-open "$1" >/dev/null 2>&1 & ;;
+  esac
+}
+
+rc=0
+for f in "$@"; do
+  if [[ ! -f "$f" ]]; then echo "Không có file: $f" >&2; rc=1; continue; fi
+  p="$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"
+  ext="$(tr '[:upper:]' '[:lower:]' <<<"${p##*.}")"
+  case "$ext" in
+    png|jpg|jpeg|gif|webp|bmp)
+      if [[ -n "${KITTY_LISTEN_ON:-}" ]] && command -v kitty >/dev/null 2>&1 \
+         && kitty @ --to "$KITTY_LISTEN_ON" launch --type=os-window --title "show: ${p##*/}" \
+              kitty +kitten icat --hold "$p" >/dev/null 2>&1; then
+        echo "đã mở trong cửa sổ kitty: $p"; continue
+      fi ;;
+  esac
+  if open_default "$p"; then echo "đã mở: $p"; else rc=1; fi
+done
+exit "$rc"

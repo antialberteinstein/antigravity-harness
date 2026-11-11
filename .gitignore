@@ -1,0 +1,31 @@
+# This repo is ~/.gemini itself. Ignore everything by default;
+# only the paths listed below are tracked. Sign-in tokens, conversations,
+# browser profiles, installed plugins and agy's own settings.json never enter git.
+/*
+
+# Repo files
+!/.gitignore
+!/.github/
+!/README.md
+!/LICENSE
+!/CONTRIBUTING.md
+!/CODE_OF_CONDUCT.md
+!/SECURITY.md
+
+# Harness config
+!/GEMINI.md
+!/GEMINI.self.md
+!/agy-settings.json
+!/statusline.sh
+!/scripts/
+
+# Shared Antigravity config: only hooks.json is tracked
+!/config/
+/config/*
+!/config/hooks.json
+
+# Per-machine overrides
+/scripts/setup.d/config.local.sh
+*.bak
+*.bak-*
+.DS_Store

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/settings.json",
+  "agentMode": "auto",
+  "enableTerminalSandbox": true,
+  "colorScheme": "tokyo night",
+  "notifications": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.gemini/statusline.sh"
+  },
+  "permissions": {
+    "allow": [],
+    "ask": [
+      "command(git push)",
+      "command(gh pr create)",
+      "command(gh pr merge)",
+      "command(gh release create)",
+      "command(hf upload)",
+      "command(kaggle competitions submit)",
+      "command(kaggle kernels push)",
+      "command(kaggle datasets create)",
+      "command(kaggle datasets version)"
+    ],
+    "deny": [
+      "read_file(.env)",
+      "read_file(.env.local)",
+      "read_file(@HOME@/.ssh)",
+      "read_file(@HOME@/.gemini/jetski-standalone-oauth-token)",
+      "read_file(@HOME@/.claude.json)",
+      "command(git push --force)",
+      "command(git push -f)",
+      "command(rm -rf)"
+    ]
+  }
+}

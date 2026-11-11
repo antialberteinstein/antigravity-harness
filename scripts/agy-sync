@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# agy-sync — đồng bộ plugin của Antigravity với danh sách trong scripts/setup.d/config.sh.
+#   1. Cài các plugin trong PLUGINS mà ~/.gemini/config/plugins/ chưa có (agy plugin install <git URL>).
+#   2. Tắt (không gỡ) các plugin trong DISABLE_PLUGINS.
+#   3. Dựng plugin ecc-selected bằng build-ecc-plugin.sh nằm cùng thư mục,
+#      chỉ khi chưa có hoặc GitHub có commit ECC mới hơn.
+# Không gỡ gì. Chạy lại nhiều lần vẫn an toàn. Plugin dùng chung cho Antigravity IDE, app và agy.
+#
+# Dùng:  agy-sync              đồng bộ
+#        agy-sync -n           chỉ in ra sẽ làm gì
+#        agy-sync --update     cài lại mọi plugin trong PLUGINS từ git (lấy bản mới nhất)
+#        agy-sync --force-ecc  dựng lại ecc-selected dù đã mới nhất (vd. sau khi sửa danh sách ECC)
+#        agy-sync --skip-ecc   chỉ đồng bộ plugin
+set -euo pipefail
+
+DRY=0; UPDATE=0; ECC_MODE=auto
+for arg in "$@"; do
+  case "$arg" in
+    -n) DRY=1 ;;
+    --update) UPDATE=1 ;;
+    --force-ecc) ECC_MODE=force ;;
+    --skip-ecc) ECC_MODE=skip ;;
+    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "Tham số lạ: $arg" >&2; exit 2 ;;
+  esac
+done
+# Thư mục thật của script, kể cả khi gọi qua symlink (không dùng readlink -f: macOS cũ không có)
+src="${BASH_SOURCE[0]}"
+while [[ -L "$src" ]]; do
+  dir="$(cd "$(dirname "$src")" && pwd)"; src="$(readlink "$src")"
+  [[ "$src" == /* ]] || src="$dir/$src"
+done
+SELF_DIR="$(cd "$(dirname "$src")" && pwd)"
+ECC_SCRIPT="$SELF_DIR/build-ecc-plugin.sh"
+# shellcheck source=setup.d/config.sh
+. "$SELF_DIR/setup.d/config.sh"
+[[ -f "$SELF_DIR/setup.d/config.local.sh" ]] && . "$SELF_DIR/setup.d/config.local.sh"
+
+# timeout không có sẵn trên macOS; dùng gtimeout (coreutils) nếu có, không thì chạy thẳng
+tmo() { local s="$1"; shift
+  if command -v timeout >/dev/null; then timeout "$s" "$@"
+  elif command -v gtimeout >/dev/null; then gtimeout "$s" "$@"
+  else "$@"; fi; }
+
+GEM="${GEMINI_HOME:-$HOME/.gemini}"
+PLUGDIR="$GEM/config/plugins"
+CONFIG="$GEM/config/config.json"
+export PATH="$PATH:$GEM/bin"
+
+command -v jq >/dev/null  || { echo "Cần jq (macOS: brew install jq · Fedora: sudo dnf install jq)" >&2; exit 1; }
+command -v agy >/dev/null || { echo "Không thấy agy trong PATH hay ~/.gemini/bin" >&2; exit 1; }
+
+changed=0
+failed=0
+
+run() {
+  echo "  → $*"
+  (( DRY == 1 )) && return 0
+  if "$@" </dev/null; then changed=1
+  else echo "  ✗ thất bại: $*" >&2; failed=1; return 1; fi
+}
+
+enabled() { # tên → 0 nếu plugin đang bật (không có mục trong config.json = bật)
+  ! { [[ -f "$CONFIG" ]] && jq -e --arg n "$1" '.plugins[$n].enabled == false' "$CONFIG" >/dev/null 2>&1; }
+}
+
+# ─── Plugin ─────────────────────────────────────────────────────────
+t='~'; echo "[plugins] ${PLUGDIR/#$HOME/$t}"
+while IFS='|' read -r name url opts; do
+  [[ -n "$name" ]] || continue
+  if [[ -d "$PLUGDIR/$name" && $UPDATE == 0 ]]; then
+    echo "  ✓ $name"
+  else
+    run agy plugin install "$url" || continue
+  fi
+  # plugin để skill ở thư mục gốc: thêm skills.json để agy quét thư mục gốc (agy chỉ tự đọc skills/)
+  case ",$opts," in *",skills-root,"*)
+    if [[ ! -f "$PLUGDIR/$name/skills.json" ]]; then
+      echo "  → $name: thêm skills.json (skill nằm ở thư mục gốc)"
+      if (( DRY == 0 )); then echo '{"entries":[{"path":"."}]}' > "$PLUGDIR/$name/skills.json"; changed=1; fi
+    fi ;;
+  esac
+  enabled "$name" || echo "  ! $name đang bị tắt; bật bằng: agy plugin enable $name"
+done <<<"$PLUGINS"
+
+for name in $DISABLE_PLUGINS; do
+  [[ -d "$PLUGDIR/$name" ]] || continue
+  if enabled "$name"; then run agy plugin disable "$name" || true
+  else echo "  ✓ $name đã tắt"; fi
+done
+
+# ─── ECC chọn lọc ───────────────────────────────────────────────────
+sync_ecc() {
+  [[ "$ECC_MODE" == skip ]] && return 0
+  echo "[ecc-selected]"
+  if [[ ! -f "$ECC_SCRIPT" ]]; then
+    echo "  ! không thấy $ECC_SCRIPT, bỏ qua ECC" >&2; return 0
+  fi
+  local cur latest
+  cur=$(sed -n 's/^commit: //p' "$PLUGDIR/ecc-selected/SOURCE" 2>/dev/null || true)
+  if [[ "$ECC_MODE" == auto && -n "$cur" && -z "${ECC_REF:-}" && -z "${ECC_SRC:-}" ]]; then
+    latest=$(tmo 20 git ls-remote https://github.com/affaan-m/ECC HEAD 2>/dev/null | cut -f1 || true)
+    if [[ -z "$latest" ]]; then
+      echo "  ! không kiểm tra được bản ECC mới nhất (mạng?), giữ ${cur:0:7}" >&2; return 0
+    elif [[ "$latest" == "$cur" ]]; then
+      echo "  ✓ ECC đã mới nhất (${cur:0:7})"; return 0
+    fi
+    echo "  ECC ${cur:0:7} → ${latest:0:7}"
+  fi
+  local args=(); (( DRY == 1 )) && args+=(-n)
+  echo "  → build-ecc-plugin.sh ${args[*]:-}"
+  if bash "$ECC_SCRIPT" ${args[@]+"${args[@]}"}; then   # dạng này an toàn với mảng rỗng trên bash 3.2
+    (( DRY == 1 )) || changed=1
+  else
+    echo "  ✗ dựng ecc-selected thất bại" >&2; failed=1
+  fi
+}
+sync_ecc
+
+if (( DRY == 1 )); then
+  echo "Chạy thử: chưa cài gì."
+elif (( failed == 1 )); then
+  echo "Có lệnh thất bại, xem các dòng ✗ ở trên." >&2
+elif (( changed == 1 )); then
+  echo "Đã cài xong. Mở phiên agy mới (hoặc chạy /skills reload) để nạp plugin."
+else
+  echo "Đã đồng bộ, không có gì để cài."
+fi
+exit "$failed"

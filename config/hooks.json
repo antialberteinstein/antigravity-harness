@@ -1,0 +1,11 @@
+{
+  "harness-notify": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bash ~/.gemini/scripts/notify.sh",
+        "timeout": 10
+      }
+    ]
+  }
+}
