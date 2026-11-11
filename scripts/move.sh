@@ -55,7 +55,7 @@ find "$SRC" -depth -type d -empty -exec rmdir {} \; 2>/dev/null || true
 [[ -d "$SRC" ]] && say "Left over in $SRC (untracked files, not touched)"
 
 git -C "$DEST" update-index -q --refresh || true
-(( backed )) && say "Backed up $backed existing file(s) to ${BACKUP/#$HOME/\~} — diff them against the new ones and keep what you need."
+t="~"; (( backed )) && say "Backed up $backed existing file(s) to ${BACKUP/#$HOME/$t} — diff them against the new ones and keep what you need."
 say "Done. git status in $DEST:"
 git -C "$DEST" status --short
 say "Next: bash ~/.gemini/scripts/setup.sh"
