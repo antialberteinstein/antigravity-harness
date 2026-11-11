@@ -11,7 +11,3 @@
 - Available and authenticated: `gh`, `hf`, `kaggle`, `uv`. Use these CLIs for GitHub, Hugging Face and Kaggle instead of guessing or asking me to do it.
 - If a CLI you need is missing, stop and tell me to run `~/.gemini/scripts/setup.sh --install`. Do not install it yourself.
 - To show me an image, chart, PDF or HTML report, run `show <file>`. To check a chart yourself, view the image file.
-
-## Personal guidelines
-
-@[GEMINI.self.md](GEMINI.self.md)

@@ -14,7 +14,6 @@
 
 # Harness config
 !/GEMINI.md
-!/GEMINI.self.md
 !/agy-settings.json
 !/statusline.sh
 !/scripts/
@@ -27,6 +26,9 @@
 /config/skills/*
 !/config/skills/harness-check/
 !/config/skills/setup-agy-project/
+
+# Rules kept for reference, not loaded and not tracked
+/old-rules/
 
 # Per-machine overrides
 /scripts/setup.d/config.local.sh

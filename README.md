@@ -17,7 +17,7 @@ Supported: macOS and Fedora.
 | --- | --- |
 | Plugins | [Superpowers](https://github.com/obra/superpowers), [Karpathy guidelines](https://github.com/multica-ai/andrej-karpathy-skills) and [kessie-skills](https://github.com/antialberteinstein/kessie-skills), installed from git by `agy-sync` |
 | [ECC](https://github.com/affaan-m/ECC) (selected) | A local `ecc-selected` plugin with 17 skills and 13 reviewer/resolver agents, converted to Antigravity subagents. The full `ecc` plugin is disabled (not removed). ECC hooks are left out: they are written for Claude Code |
-| `GEMINI.md` | Load the Karpathy guidelines before coding; run tests before calling a task done; use `gh`, `hf`, `kaggle`, `uv` instead of guessing; ask before adding CI that runs e2e tests. Includes `GEMINI.self.md` (personal coding style) |
+| `GEMINI.md` | Load the Karpathy guidelines before coding; run tests before calling a task done; use `gh`, `hf`, `kaggle`, `uv` instead of guessing; ask before adding CI that runs e2e tests. |
 | Permissions (`agy`) | Auto mode in the terminal sandbox; `~/.ssh`, the Antigravity sign-in token and `~/.claude.json` denied; anything that pushes data out (`git push`, PRs, releases, uploads) asks first |
 | Secret guard | A `PreToolUse` hook stops file tools from reading or editing `.env` and `.env.*` in any folder (`.env.example`, `.sample`, `.template` stay readable), in the IDE, app and `agy` |
 | MCP | Context7 for up-to-date library docs, in the shared `mcp_config.json` |
@@ -28,7 +28,7 @@ Supported: macOS and Fedora.
 
 | File in this repo | Read by | Notes |
 | --- | --- | --- |
-| `GEMINI.md`, `GEMINI.self.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
+| `GEMINI.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
 | `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, finish notification |
 | `config/skills/harness-check/`, `config/skills/setup-agy-project/` | IDE, app, `agy` | The `/harness-check` and `/setup-agy-project` skills |
 | `agy-settings.json` | `setup.sh` | Merged into `~/.gemini/antigravity-cli/settings.json` (see below) |

@@ -17,7 +17,7 @@ notignored() { ! git -C "$REPO" check-ignore -q "$1"; }   # mỗi lần một fi
 # ── Máy giả: HOME riêng, harness đã nằm ở ~/.gemini ─────────────────
 H="$TMP/home"; G="$H/.gemini"; B="$TMP/bin"; LOG="$TMP/calls"
 mkdir -p "$G/config/plugins" "$G/antigravity-cli" "$H/Downloads" "$B"
-cp -R "$REPO/scripts" "$REPO/GEMINI.md" "$REPO/GEMINI.self.md" "$REPO/agy-settings.json" "$G/"
+cp -R "$REPO/scripts" "$REPO/GEMINI.md" "$REPO/agy-settings.json" "$G/"
 cp -R "$REPO/config/hooks.json" "$G/config/"
 rm -f "$G/scripts/setup.d/config.local.sh"
 SETUP="$G/scripts/setup.sh"
@@ -143,9 +143,10 @@ out=$(run --os fedora --only validate)
 check "validate: skill lẻ trùng plugin đang bật"      has "$out" "skill foo ở ~/.gemini/config/skills trùng với plugin bar"
 check "validate: bỏ qua plugin đã tắt khi xét trùng"  hasnt "$out" "skill solo"
 rm -rf "$G/config/skills" "$G/plist.json"
-mv "$G/GEMINI.self.md" "$TMP/self.md"; out=$(run --os fedora --only validate)
-check "validate: include của GEMINI.md bị thiếu"      has "$out" "include tới file không có: GEMINI.self.md"
-mv "$TMP/self.md" "$G/GEMINI.self.md"
+cp "$G/GEMINI.md" "$TMP/gemini.md"; printf '\n@[x](missing-rules.md)\n' >> "$G/GEMINI.md"
+out=$(run --os fedora --only validate)
+check "validate: include của GEMINI.md bị thiếu"      has "$out" "include tới file không có: missing-rules.md"
+cp "$TMP/gemini.md" "$G/GEMINI.md"
 rm -rf "$G/config/plugins/claude-style" "$G/config/plugins/off-style" "$G/config/config.json"
 out=$(run --os fedora --only nosuch); rc=$?
 check "--only module không tồn tại thì lỗi"           [ "$rc" -ne 0 ]
