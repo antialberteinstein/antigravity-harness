@@ -165,8 +165,7 @@ check "agy-sync -n: in lệnh cài superpowers"          has "$out" "→ agy plu
 : > "$LOG"; out=$(sync --skip-ecc); rc=$?
 check "agy-sync: chạy thành công"                     [ "$rc" -eq 0 ]
 check "agy-sync: cài 3 plugin"                        [ "$(grep -c 'agy plugin install' "$LOG")" -eq 3 ]
-check "agy-sync: thêm skills.json cho kessie-skills"  jqt '.entries[0].path == "."' "$G/config/plugins/kessie-skills/skills.json"
-check "agy-sync: không thêm skills.json cho plugin khác" [ ! -f "$G/config/plugins/superpowers/skills.json" ]
+check "agy-sync: không tự sinh skills.json (kessie đã có sẵn)" [ ! -f "$G/config/plugins/kessie-skills/skills.json" ]
 check "agy-sync: tắt ecc"                             jqt '.plugins.ecc.enabled == false' "$G/config/config.json"
 : > "$LOG"; out=$(sync --skip-ecc)
 check "agy-sync: chạy lại không cài gì"               hasnt "$(cat "$LOG")" "agy plugin"

@@ -96,7 +96,6 @@ Machine-specific overrides for setup and `agy-sync` go in `scripts/setup.d/confi
 - `agy` permission rules take absolute paths only: a relative rule such as `read_file(.env)` makes the terminal sandbox reject every command (`non-absolute file path`). That is why `.env` is guarded by a hook, and why `REMOVE_PERMISSIONS` in `config.sh` strips rules the harness no longer wants (the merge otherwise only adds).
 - agy's terminal sandbox cannot read `~/.gemini`, so the harness skills run their scripts outside it (agy asks first). A slash command also reaches the agent without the skill's path, which is why these skills spell out `~/.gemini/...` paths.
 - The secret guard covers file tools, not shell commands such as `cat .env`, the same as claude-harness's `Read` deny rules.
-- `kessie-skills` keeps its skills at the repo root (Claude Code's `"skills": "./"`), which Antigravity does not read. `agy-sync` adds a `skills.json` inside the installed plugin so they load; reinstalling re-adds it.
 - Auto mode needs the terminal sandbox and is not offered on business or enterprise accounts.
 
 ## License

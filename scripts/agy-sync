@@ -66,20 +66,13 @@ enabled() { # tên → 0 nếu plugin đang bật (không có mục trong config
 
 # ─── Plugin ─────────────────────────────────────────────────────────
 t='~'; echo "[plugins] ${PLUGDIR/#$HOME/$t}"
-while IFS='|' read -r name url opts; do
+while IFS='|' read -r name url; do
   [[ -n "$name" ]] || continue
   if [[ -d "$PLUGDIR/$name" && $UPDATE == 0 ]]; then
     echo "  ✓ $name"
   else
     run agy plugin install "$url" || continue
   fi
-  # plugin để skill ở thư mục gốc: thêm skills.json để agy quét thư mục gốc (agy chỉ tự đọc skills/)
-  case ",$opts," in *",skills-root,"*)
-    if [[ ! -f "$PLUGDIR/$name/skills.json" ]]; then
-      echo "  → $name: thêm skills.json (skill nằm ở thư mục gốc)"
-      if (( DRY == 0 )); then echo '{"entries":[{"path":"."}]}' > "$PLUGDIR/$name/skills.json"; changed=1; fi
-    fi ;;
-  esac
   enabled "$name" || echo "  ! $name đang bị tắt; bật bằng: agy plugin enable $name"
 done <<<"$PLUGINS"
 
