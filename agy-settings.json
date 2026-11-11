@@ -9,7 +9,9 @@
     "command": "bash ~/.gemini/statusline.sh"
   },
   "permissions": {
-    "allow": [],
+    "allow": [
+      "mcp(context7/*)"
+    ],
     "ask": [
       "command(git push)",
       "command(gh pr create)",

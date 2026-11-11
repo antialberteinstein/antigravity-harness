@@ -109,7 +109,7 @@ JSON
 out=$(run --os darwin --only settings)
 check "settings: giữ model và trustedWorkspaces"      jqt '.model == "Gemini 3.8 Flash (Medium)" and .trustedWorkspaces == ["/private/proj"]' "$S"
 check "settings: giá trị harness thắng"               jqt '.colorScheme == "tokyo night" and .statusLine.command == "bash ~/.gemini/statusline.sh"' "$S"
-check "settings: giữ quy tắc allow của người dùng"     jqt '.permissions.allow == ["command(make test)"]' "$S"
+check "settings: giữ quy tắc allow của người dùng"     jqt '.permissions.allow == ["command(make test)", "mcp(context7/*)"]' "$S"
 check "settings: thêm quy tắc ask của harness"         jqt '.permissions.ask | index("command(git push)")' "$S"
 check "settings: deny không bị lặp"                    jqt '[.permissions.deny[] | select(. == "command(rm -rf)")] | length == 1' "$S"
 check "settings: thay @HOME@ bằng HOME"                jqt ".permissions.deny | index(\"read_file($H/.ssh)\")" "$S"
