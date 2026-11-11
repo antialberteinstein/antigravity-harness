@@ -247,5 +247,14 @@ out=$(printf 'không phải json' | env -i PATH="/usr/bin:/bin" bash "$GS"); rc=
 check "guard: input hỏng thì im lặng, exit 0"        [ -z "$out" -a "$rc" -eq 0 ]
 check "hooks.json gắn guard-secrets vào PreToolUse"  jqt '.["harness-guard-secrets"].PreToolUse[0].hooks[0].command | test("guard-secrets.sh")' "$REPO/config/hooks.json"
 
+# ── Skill /harness-check của harness ─────────────────────────────────
+HC="$REPO/config/skills/harness-check/SKILL.md"
+fm="$(awk 'NR==1&&/^---$/{f=1;next} f&&/^---$/{exit} f' "$HC" 2>/dev/null)"
+check "harness-check: name khớp thư mục"             grep -qx "name: harness-check" <<<"$fm"
+check "harness-check: chỉ chạy khi người dùng gõ"    grep -qx "disable-model-invocation: true" <<<"$fm"
+notignored() { ! git -C "$REPO" check-ignore -q "$1"; }
+check "harness-check: không bị .gitignore bỏ qua"    notignored "$HC"
+check "harness-check: gọi setup.sh -n và agy-sync -n" grep -qF 'agy-sync -n' "$HC"
+
 echo "---"; echo "$pass passed, $failn failed"
 [ "$failn" -eq 0 ]

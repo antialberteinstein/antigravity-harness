@@ -23,6 +23,9 @@
 !/config/
 /config/*
 !/config/hooks.json
+!/config/skills/
+/config/skills/*
+!/config/skills/harness-check/
 
 # Per-machine overrides
 /scripts/setup.d/config.local.sh

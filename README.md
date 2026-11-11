@@ -30,6 +30,7 @@ Supported: macOS and Fedora.
 | --- | --- | --- |
 | `GEMINI.md`, `GEMINI.self.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
 | `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, finish notification |
+| `config/skills/harness-check/` | IDE, app, `agy` | The `/harness-check` skill |
 | `agy-settings.json` | `setup.sh` | Merged into `~/.gemini/antigravity-cli/settings.json` (see below) |
 | `statusline.sh` | `agy` | Custom status line |
 | `scripts/setup.d/config.sh` | `setup.sh`, `agy-sync` | CLIs, MCP servers, plugins, commands to link |
@@ -69,6 +70,11 @@ show chart.png                         # open an image or report (new Kitty wind
 bash ~/.gemini/scripts/setup.sh --list # list setup modules; run one with --only <name>
 bash ~/.gemini/scripts/setup.d/test.sh # offline tests
 ```
+
+Inside `agy` (or the IDE and app):
+
+- `/harness-check`: run setup and `agy-sync` in preview mode, list MCP servers and the harness repo's git state, then report problems and offer fixes. It replaces kessie-skills' Claude-only `/harness-check`.
+- kessie-skills' `/proj`, `/issue-resolve`, `/pr-review` work as on Claude Code; `/setup-project` and `/add-preset` are Claude Code only.
 
 If [claude-harness](https://github.com/antialberteinstein/claude-harness) already linked `show`, setup keeps that link: both harnesses ship the same script.
 
