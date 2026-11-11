@@ -194,6 +194,8 @@ check "statusline: hiện model"                        has "$out" "Gemini 3.8 F
 check "statusline: hiện chế độ plan"                  has "$out" "PLAN"
 check "statusline: ctx 42%"                           has "$out" "▰▰▰▱▱▱ 42%"
 check "statusline: quota bỏ nhóm bị tắt"              has "$out" "quota 23%"
+out=$(cd / && HOME=/home/u AGY_SL_NERD=0 bash "$SL" <<<'{"cwd":"/home/u/proj"}' | sed $'s/\033\\[[0-9;]*m//g')
+check "statusline: rút gọn HOME thành ~"              has "$out" " ~/proj "
 out=$(cd / && AGY_SL_NERD=0 bash "$SL" <<<'{"vim":{"mode":"INSERT"},"cycle_mode":"plan"}' | sed $'s/\033\\[[0-9;]*m//g')
 check "statusline: chế độ Vim ưu tiên hơn"            has "$out" "INSERT"
 out=$(env -i PATH=/bin /bin/bash "$SL" <<<"{}")

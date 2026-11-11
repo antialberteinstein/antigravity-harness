@@ -55,7 +55,7 @@ lim=$(j '[.quota // {} | .[] | select((.disabled // false) | not) | .remaining_f
          | if length > 0 then ((1 - min) * 100 | floor) else empty end')
 width=$(j '.terminal_width'); [[ -n "$width" ]] || width="${COLUMNS:-0}"
 
-short="${dir/#$HOME/\~}"
+t='~'; short="${dir/#$HOME/$t}"   # qua biến: bash 5 in "\~" nếu viết thẳng \~
 # thu gọn đường dẫn dài: ~/a/b/c/d → ~/…/c/d
 IFS=/ read -r -a parts <<<"$short"
 if (( ${#parts[@]} > 4 )); then short="${parts[0]}/…/${parts[${#parts[@]}-2]}/${parts[${#parts[@]}-1]}"; fi
