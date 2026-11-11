@@ -263,8 +263,10 @@ out=$(cd / && HOME=/home/u AGY_SL_NERD=0 bash "$SL" <<<'{"cwd":"/home/u/proj"}' 
 check "statusline: rút gọn HOME thành ~"              has "$out" " ~/proj "
 out=$(cd / && AGY_SL_NERD=0 bash "$SL" <<<'{"vim":{"mode":"INSERT"},"cycle_mode":"plan"}' | sed $'s/\033\\[[0-9;]*m//g')
 check "statusline: chế độ Vim ưu tiên hơn"            has "$out" "INSERT"
+out=$(cd / && AGY_SL_NERD=0 bash "$SL" <<<'{"cwd":"/"}' | sed $'s/\033\\[[0-9;]*m//g')
+check "statusline: chế độ mặc định hiện Antigravity"  has "$out" " Antigravity "
 out=$(env -i PATH=/bin /bin/bash "$SL" <<<"{}")
-check "statusline: không có jq vẫn in"                [ "$out" = "agy" ]
+check "statusline: không có jq vẫn in"                [ "$out" = "Antigravity" ]
 
 # ── notify.sh ────────────────────────────────────────────────────────
 NT="$REPO/scripts/notify.sh"

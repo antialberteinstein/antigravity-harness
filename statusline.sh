@@ -5,14 +5,14 @@
 #  └─ A ┘└─ B ─┘└──── C ────┘           └── X ───┘ └──── Y ─────┘ └────────── Z ──────────┘
 #
 # agy đưa JSON trạng thái phiên vào stdin (antigravity.google/docs/cli/statusline).
-# A = chế độ Vim nếu bật, không thì chế độ agent (PLAN, AUTO, EDITS), mặc định AGY.
+# A = chế độ Vim nếu bật, không thì chế độ agent (PLAN, AUTO, EDITS), mặc định Antigravity.
 # X = phần quota đã dùng của nhóm quota còn ít nhất. Chạy được với bash 3.2 (macOS).
 # Tuỳ chỉnh bằng biến môi trường:
 #   AGY_SL_THEME   tokyonight (mặc định, khớp colorScheme "tokyo night") | catppuccin | gruvbox
 #   AGY_SL_NERD=0  không dùng glyph Nerd Font (khi terminal không có font)
 
 input=$(cat)
-command -v jq >/dev/null 2>&1 || { echo "agy"; exit 0; }
+command -v jq >/dev/null 2>&1 || { echo "Antigravity"; exit 0; }
 
 # ─── Bảng màu ────────────────────────────────────────────────────────
 case "${AGY_SL_THEME:-tokyonight}" in
@@ -45,7 +45,7 @@ R=$'\033[0m'; B=$'\033[1m'
 
 # ─── Dữ liệu ─────────────────────────────────────────────────────────
 j() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
-model=$(j '.model.display_name'); [[ -n "$model" ]] || model=$(j '.model.id'); [[ -n "$model" ]] || model=agy
+model=$(j '.model.display_name'); [[ -n "$model" ]] || model=$(j '.model.id'); [[ -n "$model" ]] || model=Antigravity
 dir=$(j '.workspace.current_dir'); [[ -n "$dir" ]] || dir=$(j '.cwd'); [[ -n "$dir" ]] || dir="$PWD"
 vim_mode=$(j '.vim.mode')
 cycle=$(j '.cycle_mode')
@@ -101,7 +101,7 @@ case "$vim_mode" in
       plan)         seg_l "$BLUE"   "$BG" "PLAN" b ;;
       auto)         seg_l "$ORANGE" "$BG" "AUTO" b ;;
       accept-edits) seg_l "$GREEN"  "$BG" "EDITS" b ;;
-      *)            seg_l "$PURPLE" "$BG" "AGY" b ;;
+      *)            seg_l "$PURPLE" "$BG" "Antigravity" b ;;
     esac ;;
 esac
 [[ -n "$branch" ]] && seg_l "$S1" "$TX" "${I_GIT}${branch}"
