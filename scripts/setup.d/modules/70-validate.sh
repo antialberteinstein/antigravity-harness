@@ -4,6 +4,7 @@ step_validate() {
   _validate_rules
   _validate_commands
   _validate_plugin_hooks
+  _validate_duplicate_skills
 }
 
 # GEMINI.md: có, không vượt 24 KB (agy cắt bớt phần thừa), các include @[..](..) trỏ tới file có thật
@@ -56,4 +57,21 @@ _validate_plugin_hooks() {
   else
     ok "không plugin nào dùng hooks.json kiểu Claude Code"
   fi
+}
+
+# Skill lẻ trong ~/.gemini/config/skills trùng tên skill của plugin đang bật: một trong hai bị che,
+# thường là bản cũ chép bằng tay hay bằng install.sh trước khi cài plugin
+_validate_duplicate_skills() {
+  local dir="$SHARED/skills" list d name owner dup=0
+  [[ -d "$dir" ]] && have agy || return 0
+  list=$(agy plugin list --json 2>/dev/null </dev/null) || return 0
+  for d in "$dir"/*/; do
+    [[ -f "$d/SKILL.md" ]] || continue
+    name="$(basename "$d")"
+    owner=$(jq -r --arg s "$name" '[.[] | select(.enabled != false and ((.skills // []) | index($s))) | .name] | join(", ")' <<<"$list" 2>/dev/null)
+    [[ -n "$owner" ]] || continue
+    warn "skill $name ở $(tilde "$dir") trùng với plugin $owner: chuyển bản lẻ vào ~/.gemini/backups/ nếu nó cũ hơn"
+    dup=1
+  done
+  (( dup == 0 )) && ok "không skill lẻ nào trùng skill của plugin"
 }

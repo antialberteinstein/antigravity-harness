@@ -36,6 +36,8 @@ case "\$1 \$2" in
     jq --arg n "\$3" '.mcpServers[\$n] = {command: "npx"}' "\$f" > "\$f.t" && mv "\$f.t" "\$f" ;;
   "plugin install")
     n="\${3##*/}"; n="\${n%.git}"; mkdir -p "\$G/config/plugins/\$n"; echo "{\"name\":\"\$n\"}" > "\$G/config/plugins/\$n/plugin.json" ;;
+  "plugin list")
+    cat "\$G/plist.json" 2>/dev/null || echo '[]' ;;
   "plugin disable")
     f="\$G/config/config.json"; [ -f "\$f" ] || echo '{}' > "\$f"
     jq --arg n "\$3" '.plugins[\$n].enabled = false' "\$f" > "\$f.t" && mv "\$f.t" "\$f" ;;
@@ -131,6 +133,12 @@ check "validate: thấy notify.sh của hook"             has "$out" "✓ ~/.gem
 check "validate: GEMINI.md trong giới hạn"            has "$out" "✓ GEMINI.md"
 check "validate: cảnh báo hooks.json kiểu Claude"     has "$out" "kiểu Claude Code (agy không chạy đúng): claude-style"
 check "validate: bỏ qua plugin đã tắt"                hasnt "$out" "off-style"
+mkdir -p "$G/config/skills/foo" "$G/config/skills/solo"; touch "$G/config/skills/foo/SKILL.md" "$G/config/skills/solo/SKILL.md"
+echo '[{"name":"bar","enabled":true,"skills":["foo"]},{"name":"off","enabled":false,"skills":["solo"]}]' > "$G/plist.json"
+out=$(run --os fedora --only validate)
+check "validate: skill lẻ trùng plugin đang bật"      has "$out" "skill foo ở ~/.gemini/config/skills trùng với plugin bar"
+check "validate: bỏ qua plugin đã tắt khi xét trùng"  hasnt "$out" "skill solo"
+rm -rf "$G/config/skills" "$G/plist.json"
 mv "$G/GEMINI.self.md" "$TMP/self.md"; out=$(run --os fedora --only validate)
 check "validate: include của GEMINI.md bị thiếu"      has "$out" "include tới file không có: GEMINI.self.md"
 mv "$TMP/self.md" "$G/GEMINI.self.md"
