@@ -5,6 +5,7 @@
 #   - object: trộn sâu, giá trị của harness thắng
 #   - permissions.allow/ask/deny: hợp hai danh sách (giữ quy tắc agy đã lưu khi bạn bấm "Always allow")
 #   - chuỗi "@HOME@" được thay bằng $HOME của máy này
+#   - quy tắc trong REMOVE_PERMISSIONS (config.sh) bị gỡ
 step_settings() {
   say "settings.json của agy"
   [[ -f "$HARNESS_SETTINGS" ]] || { fail "không có $(tilde "$HARNESS_SETTINGS")"; return; }
@@ -33,14 +34,16 @@ step_settings() {
 }
 
 _settings_merge() { # JSON đang dùng → in JSON đã trộn
-  jq --arg home "$HOME" --argjson live "$1" '
+  jq --arg home "$HOME" --arg rm "${REMOVE_PERMISSIONS:-}" --argjson live "$1" '
     def uniq: reduce .[] as $x ([]; if index([$x]) then . else . + [$x] end);
-    (walk(if type == "string" then gsub("@HOME@"; $home) else . end)) as $h
+    ($rm | split("\n") | map(select(. != ""))) as $drop
+    | (walk(if type == "string" then gsub("@HOME@"; $home) else . end)) as $h
     | ($live.permissions // {}) as $lp | ($h.permissions // {}) as $hp
     | ($live * ($h | del(.permissions)))
     | if ($lp + $hp) == {} then . else
         .permissions = ((($lp | keys) + ($hp | keys) | unique)
-          | map({key: ., value: (($lp[.] // []) + ($hp[.] // []) | uniq)}) | from_entries)
+          | map({key: ., value: (($lp[.] // []) + ($hp[.] // []) | uniq | map(select(. as $r | $drop | index($r) | not)))})
+          | from_entries)
       end
   ' "$HARNESS_SETTINGS"
 }

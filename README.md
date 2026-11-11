@@ -18,7 +18,8 @@ Supported: macOS and Fedora.
 | Plugins | [Superpowers](https://github.com/obra/superpowers), [Karpathy guidelines](https://github.com/multica-ai/andrej-karpathy-skills) and [kessie-skills](https://github.com/antialberteinstein/kessie-skills), installed from git by `agy-sync` |
 | [ECC](https://github.com/affaan-m/ECC) (selected) | A local `ecc-selected` plugin with 17 skills and 13 reviewer/resolver agents, converted to Antigravity subagents. The full `ecc` plugin is disabled (not removed). ECC hooks are left out: they are written for Claude Code |
 | `GEMINI.md` | Load the Karpathy guidelines before coding; run tests before calling a task done; use `gh`, `hf`, `kaggle`, `uv` instead of guessing; ask before adding CI that runs e2e tests. Includes `GEMINI.self.md` (personal coding style) |
-| Permissions (`agy`) | Auto mode in the terminal sandbox; secrets (`.env`, `~/.ssh`, the Antigravity sign-in token, `~/.claude.json`) denied; anything that pushes data out (`git push`, PRs, releases, uploads) asks first |
+| Permissions (`agy`) | Auto mode in the terminal sandbox; `~/.ssh`, the Antigravity sign-in token and `~/.claude.json` denied; anything that pushes data out (`git push`, PRs, releases, uploads) asks first |
+| Secret guard | A `PreToolUse` hook stops file tools from reading or editing `.env` and `.env.*` in any folder (`.env.example`, `.sample`, `.template` stay readable), in the IDE, app and `agy` |
 | MCP | Context7 for up-to-date library docs, in the shared `mcp_config.json` |
 | Statusline (`agy`) | Lualine-style: Vim or agent mode, git branch, directory, quota used, context bar, model |
 | Notifications | `agy`: built-in bell and desktop notification. IDE and app: a `Stop` hook sends a system notification when the agent finishes |
@@ -28,12 +29,12 @@ Supported: macOS and Fedora.
 | File in this repo | Read by | Notes |
 | --- | --- | --- |
 | `GEMINI.md`, `GEMINI.self.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
-| `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks |
+| `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, finish notification |
 | `agy-settings.json` | `setup.sh` | Merged into `~/.gemini/antigravity-cli/settings.json` (see below) |
 | `statusline.sh` | `agy` | Custom status line |
 | `scripts/setup.d/config.sh` | `setup.sh`, `agy-sync` | CLIs, MCP servers, plugins, commands to link |
 
-`agy` writes its own `settings.json` (model, trusted workspaces, "always allow" rules), and trusted workspaces are private paths. So that file is not tracked. `setup.sh` merges `agy-settings.json` into it instead: objects are deep-merged with the harness winning, `permissions.allow/ask/deny` lists are unioned, and `@HOME@` becomes this machine's `$HOME`. The old file is backed up first.
+`agy` writes its own `settings.json` (model, trusted workspaces, "always allow" rules), and trusted workspaces are private paths. So that file is not tracked. `setup.sh` merges `agy-settings.json` into it instead: objects are deep-merged with the harness winning, `permissions.allow/ask/deny` lists are unioned minus `REMOVE_PERMISSIONS`, and `@HOME@` becomes this machine's `$HOME`. The old file is backed up first.
 
 ## Install
 
@@ -85,7 +86,8 @@ Machine-specific overrides for setup and `agy-sync` go in `scripts/setup.d/confi
 
 ## Limits
 
-- `agy` permission rules match paths, not globs: `read_file(.env)` covers `.env` at the workspace root, not `config/.env` or `.env.production`.
+- `agy` permission rules take absolute paths only: a relative rule such as `read_file(.env)` makes the terminal sandbox reject every command (`non-absolute file path`). That is why `.env` is guarded by a hook, and why `REMOVE_PERMISSIONS` in `config.sh` strips rules the harness no longer wants (the merge otherwise only adds).
+- The secret guard covers file tools, not shell commands such as `cat .env`, the same as claude-harness's `Read` deny rules.
 - `kessie-skills` keeps its skills at the repo root (Claude Code's `"skills": "./"`), which Antigravity does not read. `agy-sync` adds a `skills.json` inside the installed plugin so they load; reinstalling re-adds it.
 - Auto mode needs the terminal sandbox and is not offered on business or enterprise accounts.
 

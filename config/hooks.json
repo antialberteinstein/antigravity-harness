@@ -7,5 +7,19 @@
         "timeout": 10
       }
     ]
+  },
+  "harness-guard-secrets": {
+    "PreToolUse": [
+      {
+        "matcher": "read_file|edit_file|write_file|view_file|write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.gemini/scripts/guard-secrets.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

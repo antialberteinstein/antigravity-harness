@@ -26,3 +26,10 @@ kessie-skills|https://github.com/antialberteinstein/kessie-skills|skills-root"
 
 # Plugin cần tắt (không gỡ). `ecc` là bản ECC đầy đủ import từ Claude Code; harness dùng ecc-selected thay thế.
 DISABLE_PLUGINS="ecc"
+
+# Quy tắc quyền cần gỡ khỏi ~/.gemini/antigravity-cli/settings.json (mỗi dòng một quy tắc).
+# Bước trộn settings chỉ cộng thêm quy tắc, nên quy tắc harness từng ghi mà nay bỏ đi phải nêu ở đây.
+#   read_file(.env…): đường dẫn tương đối làm terminal sandbox báo "non-absolute file path"
+#                     và mọi lệnh trong sandbox đều thất bại. .env được chặn bằng hook guard-secrets.
+REMOVE_PERMISSIONS="read_file(.env)
+read_file(.env.local)"

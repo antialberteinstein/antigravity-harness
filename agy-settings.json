@@ -22,8 +22,6 @@
       "command(kaggle datasets version)"
     ],
     "deny": [
-      "read_file(.env)",
-      "read_file(.env.local)",
       "read_file(@HOME@/.ssh)",
       "read_file(@HOME@/.gemini/jetski-standalone-oauth-token)",
       "read_file(@HOME@/.claude.json)",

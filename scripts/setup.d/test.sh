@@ -104,7 +104,7 @@ check "link: thêm PATH vào ~/.zshrc"                  grep -qF '# antigravity 
 S="$G/antigravity-cli/settings.json"
 cat > "$S" <<JSON
 { "colorScheme": "dark", "model": "Gemini 3.8 Flash (Medium)", "trustedWorkspaces": ["/private/proj"],
-  "permissions": { "allow": ["command(make test)"], "deny": ["command(rm -rf)"] } }
+  "permissions": { "allow": ["command(make test)"], "deny": ["command(rm -rf)", "read_file(.env)"] } }
 JSON
 out=$(run --os darwin --only settings)
 check "settings: giữ model và trustedWorkspaces"      jqt '.model == "Gemini 3.8 Flash (Medium)" and .trustedWorkspaces == ["/private/proj"]' "$S"
@@ -113,6 +113,9 @@ check "settings: giữ quy tắc allow của người dùng"     jqt '.permissio
 check "settings: thêm quy tắc ask của harness"         jqt '.permissions.ask | index("command(git push)")' "$S"
 check "settings: deny không bị lặp"                    jqt '[.permissions.deny[] | select(. == "command(rm -rf)")] | length == 1' "$S"
 check "settings: thay @HOME@ bằng HOME"                jqt ".permissions.deny | index(\"read_file($H/.ssh)\")" "$S"
+check "settings: không có quy tắc đường dẫn tương đối (sandbox từ chối)" \
+  jqt '[.permissions[][] | select(test("^(read_file|write_file)\\([^/@]"))] | length == 0' "$S"
+check "settings: gỡ quy tắc trong REMOVE_PERMISSIONS"  jqt '.permissions.deny | index("read_file(.env)") | not' "$S"
 check "settings: sao lưu bản cũ"                       ls "$S".bak-* >/dev/null 2>&1
 out=$(run --os darwin --only settings)
 check "settings: chạy lại thì đã khớp"                 has "$out" "đã khớp"
@@ -224,6 +227,25 @@ out=$(nrun '{"terminationReason":"NO_TOOL_CALL","transcriptPath":"/x/.gemini/ant
 check "notify: IDE thì gửi thông báo"                 grep -qE '(terminal-notifier|osascript|notify-send).*Antigravity IDE · proj' "$LOG"
 out=$(nrun 'không phải json')
 check "notify: input hỏng vẫn in {}"                  [ "$out" = "{}" ]
+
+# ── guard-secrets.sh (hook PreToolUse) ───────────────────────────────
+GS="$REPO/scripts/guard-secrets.sh"
+gs() { printf '{"toolCall":{"name":"%s","args":{"%s":"%s"}}}' "$1" "$2" "$3" | env -i PATH="/usr/bin:/bin" bash "$GS"; }
+out=$(gs read_file Path /w/proj/.env)
+check "guard: chặn đọc .env"                         jq -e '.decision == "deny"' <<<"$out"
+out=$(gs write_file Path /w/proj/config/.env.production)
+check "guard: chặn ghi .env.production"              jq -e '.decision == "deny"' <<<"$out"
+out=$(gs edit_file TargetFile .env.local)
+check "guard: nhận khoá tham số khác (TargetFile)"   jq -e '.decision == "deny"' <<<"$out"
+out=$(gs read_file Path /w/proj/.env.example)
+check "guard: cho đọc .env.example"                  [ -z "$out" ]
+out=$(gs read_file Path /w/proj/src/env.ts)
+check "guard: file thường thì im lặng (luồng quyền bình thường)" [ -z "$out" ]
+out=$(gs read_file Path /w/proj/.envrc)
+check "guard: .envrc không bị nhầm là .env"          [ -z "$out" ]
+out=$(printf 'không phải json' | env -i PATH="/usr/bin:/bin" bash "$GS"); rc=$?
+check "guard: input hỏng thì im lặng, exit 0"        [ -z "$out" -a "$rc" -eq 0 ]
+check "hooks.json gắn guard-secrets vào PreToolUse"  jqt '.["harness-guard-secrets"].PreToolUse[0].hooks[0].command | test("guard-secrets.sh")' "$REPO/config/hooks.json"
 
 echo "---"; echo "$pass passed, $failn failed"
 [ "$failn" -eq 0 ]
