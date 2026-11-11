@@ -30,7 +30,7 @@ Supported: macOS and Fedora.
 | --- | --- | --- |
 | `GEMINI.md`, `GEMINI.self.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
 | `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, finish notification |
-| `config/skills/harness-check/` | IDE, app, `agy` | The `/harness-check` skill |
+| `config/skills/harness-check/`, `config/skills/setup-agy-project/` | IDE, app, `agy` | The `/harness-check` and `/setup-agy-project` skills |
 | `agy-settings.json` | `setup.sh` | Merged into `~/.gemini/antigravity-cli/settings.json` (see below) |
 | `statusline.sh` | `agy` | Custom status line |
 | `scripts/setup.d/config.sh` | `setup.sh`, `agy-sync` | CLIs, MCP servers, plugins, commands to link |
@@ -74,6 +74,7 @@ bash ~/.gemini/scripts/setup.d/test.sh # offline tests
 Inside `agy` (or the IDE and app):
 
 - `/harness-check`: run setup and `agy-sync` in preview mode, list MCP servers and the harness repo's git state, then report problems and offer fixes. It replaces kessie-skills' Claude-only `/harness-check`.
+- `/setup-agy-project`: the Antigravity version of kessie-skills' `/setup-project`. It reads the project's manifests, proposes ECC skills and subagents, MCP servers and Antigravity marketplace plugins from [its catalog](config/skills/setup-agy-project/catalog.md), waits for your yes, then installs everything into one workspace plugin, `.agents/plugins/project-kit/`. Delete that folder to undo, or commit it to share with the team. It skips anything the global `ecc-selected` plugin already has.
 - kessie-skills' `/proj`, `/issue-resolve`, `/pr-review` work as on Claude Code; `/setup-project` and `/add-preset` are Claude Code only.
 
 If [claude-harness](https://github.com/antialberteinstein/claude-harness) already linked `show`, setup keeps that link: both harnesses ship the same script.
@@ -93,6 +94,7 @@ Machine-specific overrides for setup and `agy-sync` go in `scripts/setup.d/confi
 ## Limits
 
 - `agy` permission rules take absolute paths only: a relative rule such as `read_file(.env)` makes the terminal sandbox reject every command (`non-absolute file path`). That is why `.env` is guarded by a hook, and why `REMOVE_PERMISSIONS` in `config.sh` strips rules the harness no longer wants (the merge otherwise only adds).
+- agy's terminal sandbox cannot read `~/.gemini`, so the harness skills run their scripts outside it (agy asks first). A slash command also reaches the agent without the skill's path, which is why these skills spell out `~/.gemini/...` paths.
 - The secret guard covers file tools, not shell commands such as `cat .env`, the same as claude-harness's `Read` deny rules.
 - `kessie-skills` keeps its skills at the repo root (Claude Code's `"skills": "./"`), which Antigravity does not read. `agy-sync` adds a `skills.json` inside the installed plugin so they load; reinstalling re-adds it.
 - Auto mode needs the terminal sandbox and is not offered on business or enterprise accounts.

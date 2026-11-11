@@ -12,6 +12,7 @@ has()   { grep -qF -- "$2" <<<"$1"; }
 hasnt() { ! grep -qF -- "$2" <<<"$1"; }
 jqt()   { jq -e "$1" "$2" >/dev/null 2>&1; }   # biểu thức jq đúng trên file
 nogrep() { ! grep -qE -- "$1" "$2"; }
+notignored() { ! git -C "$REPO" check-ignore -q "$1"; }   # mỗi lần một file: -q chỉ nhận một đường dẫn
 
 # ── Máy giả: HOME riêng, harness đã nằm ở ~/.gemini ─────────────────
 H="$TMP/home"; G="$H/.gemini"; B="$TMP/bin"; LOG="$TMP/calls"
@@ -195,6 +196,53 @@ out=$(env -i HOME="$H" PATH="$B:/usr/bin:/bin" ECC_SRC="$E" bash "$G/scripts/bui
 check "ecc: thiếu agent thì dừng"                     [ "$rc" -ne 0 ]
 check "ecc: thiếu agent thì giữ plugin cũ"            [ -f "$P/agents/mle-reviewer.md" ]
 
+# ── /setup-agy-project: agy-project.sh với ECC giả ───────────────────
+AP="$REPO/config/skills/setup-agy-project/scripts/agy-project.sh"
+mkdir -p "$E/skills/fastapi-patterns"; printf -- '---\nname: fastapi-patterns\ndescription: d\n---\n' > "$E/skills/fastapi-patterns/SKILL.md"
+printf -- '---\nname: database-reviewer\ndescription: d\ntools: Read, Grep, Bash\nmodel: sonnet\n---\nbody\n' > "$E/agents/database-reviewer.md"
+PJ="$H/work/proj"; mkdir -p "$PJ"; K="$PJ/.agents/plugins/project-kit"
+ap() { (cd "${APDIR:-$PJ}" && env -i HOME="$H" PATH="$B:/usr/bin:/bin" ECC_SRC="$E" bash "$AP" "$@" 2>&1); }
+out=$(ap -n add --skills fastapi-patterns --agents database-reviewer)
+check "agy-project -n: không ghi gì"                 [ ! -e "$PJ/.agents" ]
+check "agy-project -n: in thứ sẽ thêm"               has "$out" "+ skill fastapi-patterns"
+out=$(ap add --skills fastapi-patterns,python-testing --agents database-reviewer,security-reviewer)
+check "agy-project: chép skill vào project-kit"      [ -f "$K/skills/fastapi-patterns/SKILL.md" ]
+check "agy-project: bỏ qua skill đã có ở global"     has "$out" "= skill python-testing (đã có ở plugin ecc-selected"
+check "agy-project: bỏ qua agent đã có ở global"     has "$out" "= agent security-reviewer (đã có ở plugin ecc-selected"
+check "agy-project: không chép skill đã có"          [ ! -e "$K/skills/python-testing" ]
+check "agy-project: agent thành subagent của agy"     grep -qxF 'tools: [read_file, run_command, manage_task]' "$K/agents/database-reviewer.md"
+check "agy-project: tạo plugin.json"                 jqt '.name == "project-kit"' "$K/plugin.json"
+check "agy-project: ghi trạng thái"                  jqt '.skills == ["fastapi-patterns"] and .agents == ["database-reviewer"]' "$K/ecc-state.json"
+check "agy-project: chép giấy phép ECC"              [ -f "$K/ECC-LICENSE" ]
+APDIR="$H/work/other"; mkdir -p "$APDIR"; out=$(ap add --skills no-such-skill); rc=$?
+check "agy-project: tên sai thì dừng, không ghi gì"   [ "$rc" -ne 0 -a ! -e "$APDIR/.agents" ]
+out=$(ap add --skills 'Bad;name'); rc=$?; unset APDIR
+check "agy-project: từ chối tên không hợp lệ"        [ "$rc" -ne 0 ]
+out=$(ap mcp-add hf https://huggingface.co/mcp)
+check "agy-project: mcp-add HTTP"                    jqt '.mcpServers.hf == {"url": "https://huggingface.co/mcp"}' "$K/mcp_config.json"
+out=$(ap mcp-add colab -- uvx git+https://github.com/googlecolab/colab-mcp)
+check "agy-project: mcp-add stdio"                   jqt '.mcpServers.colab == {"command": "uvx", "args": ["git+https://github.com/googlecolab/colab-mcp"]}' "$K/mcp_config.json"
+out=$(ap mcp-add hf https://example.com/mcp)
+check "agy-project: mcp đã có thì bỏ qua"            jqt '.mcpServers.hf.url == "https://huggingface.co/mcp"' "$K/mcp_config.json"
+out=$(ap status)
+check "agy-project: status liệt kê đủ"               has "$out" "mcp: colab, hf"
+out=$(ap remove --skills fastapi-patterns --mcp hf)
+check "agy-project: gỡ skill"                        [ ! -e "$K/skills/fastapi-patterns" ]
+check "agy-project: gỡ mcp"                          jqt '.mcpServers | has("hf") | not' "$K/mcp_config.json"
+check "agy-project: gỡ khỏi trạng thái"              jqt '.skills == []' "$K/ecc-state.json"
+chmod 000 "$G/config/plugins"; out=$(ap add --skills fastapi-patterns); rc=$?; chmod 755 "$G/config/plugins"
+check "agy-project: không đọc được ~/.gemini/config thì dừng (vd. sandbox)" [ "$rc" -ne 0 ]
+check "agy-project: báo rõ lý do sandbox"            has "$out" "sandbox"
+out=$(cd "$H" && env -i HOME="$H" PATH="$B:/usr/bin:/bin" bash "$AP" status 2>&1); rc=$?
+check "agy-project: từ chối chạy ở \$HOME"            [ "$rc" -ne 0 ]
+SA="$REPO/config/skills/setup-agy-project/SKILL.md"
+fm="$(awk 'NR==1&&/^---$/{f=1;next} f&&/^---$/{exit} f' "$SA")"
+check "setup-agy-project: name khớp thư mục"         grep -qx "name: setup-agy-project" <<<"$fm"
+check "setup-agy-project: chỉ chạy khi người dùng gõ" grep -qx "disable-model-invocation: true" <<<"$fm"
+for f in "$SA" "$AP" "$REPO/config/skills/setup-agy-project/catalog.md" "$REPO/scripts/lib/convert-agent.awk"; do
+  check "không bị .gitignore bỏ qua: ${f#$REPO/}"     notignored "$f"
+done
+
 # ── statusline.sh ────────────────────────────────────────────────────
 SL="$REPO/statusline.sh"
 payload='{"cwd":"/","workspace":{"current_dir":"/"},"model":{"display_name":"Gemini 3.8 Flash (Medium)"},
@@ -252,7 +300,6 @@ HC="$REPO/config/skills/harness-check/SKILL.md"
 fm="$(awk 'NR==1&&/^---$/{f=1;next} f&&/^---$/{exit} f' "$HC" 2>/dev/null)"
 check "harness-check: name khớp thư mục"             grep -qx "name: harness-check" <<<"$fm"
 check "harness-check: chỉ chạy khi người dùng gõ"    grep -qx "disable-model-invocation: true" <<<"$fm"
-notignored() { ! git -C "$REPO" check-ignore -q "$1"; }
 check "harness-check: không bị .gitignore bỏ qua"    notignored "$HC"
 check "harness-check: gọi setup.sh -n và agy-sync -n" grep -qF 'agy-sync -n' "$HC"
 

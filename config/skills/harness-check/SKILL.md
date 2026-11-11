@@ -19,7 +19,8 @@ git -C ~/.gemini status --short               # sửa tay chưa commit trong rep
 git -C ~/.gemini fetch -q && git -C ~/.gemini status -sb | head -1   # chậm hơn GitHub?
 ```
 
-Người dùng yêu cầu `offline` thì bỏ `agy-sync -n` (nó gọi git ls-remote) và lệnh `fetch`.
+Các script nằm trong `~/.gemini`, mà terminal sandbox của agy không đọc được: chạy chúng ngoài
+sandbox (agy sẽ hỏi quyền). Người dùng yêu cầu `offline` thì bỏ `agy-sync -n` (nó gọi git ls-remote) và lệnh `fetch`.
 Kết quả của các lệnh trên là sự thật duy nhất; không tự suy thêm lỗi mà chúng không báo.
 
 ## 2. Báo cáo

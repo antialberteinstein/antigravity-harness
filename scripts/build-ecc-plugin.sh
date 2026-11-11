@@ -42,6 +42,7 @@ NAME="ecc-selected"
 
 DRY=0
 [[ "${1:-}" == "-n" ]] && DRY=1
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GEM="${GEMINI_HOME:-$HOME/.gemini}"
 DEST="$GEM/config/plugins/$NAME"
 
@@ -80,41 +81,8 @@ for s in "${SKILLS[@]}"; do
 done
 (( missing == 0 )) || die "ECC đã đổi tên hoặc xoá thành phần ở trên; sửa danh sách rồi chạy lại"
 
-# Agent Claude Code → subagent Antigravity (theo skill migrate-agent-settings có sẵn trong agy):
-#   tools: Read/Glob/Grep → read_file, Edit/MultiEdit → edit_file, Write → write_file,
-#          Bash → run_command + manage_task, WebSearch/WebFetch → search_web; thiếu tools = mọi tool
-#   bỏ model, color; thêm subagent: true, mainAgent: false
 convert_agent() { # file nguồn → in ra stdout; tool không đổi được thì in tên lên stderr
-  awk '
-    function add(t) { if (!(t in seen)) { seen[t] = 1; out = out (out == "" ? "" : ", ") t } }
-    function map(t) {
-      gsub(/[][" '\''\t]/, "", t)
-      if (t == "") return
-      if (t == "Read" || t == "Glob" || t == "Grep") add("read_file")
-      else if (t == "Edit" || t == "MultiEdit") add("edit_file")
-      else if (t == "Write") add("write_file")
-      else if (t == "Bash") { add("run_command"); add("manage_task") }
-      else if (t == "WebSearch" || t == "WebFetch") add("search_web")
-      else print t > "/dev/stderr"
-    }
-    NR == 1 && /^---[ \t]*$/ { fm = 1; print; next }
-    fm == 1 && /^---[ \t]*$/ {
-      if (!has_tools) out = "read_file, edit_file, write_file, run_command, manage_task, search_web"
-      print "tools: [" out "]"
-      print "subagent: true"
-      print "mainAgent: false"
-      print; fm = 2; next
-    }
-    fm == 1 && in_list && /^[ \t]+-/ { sub(/^[ \t]+-[ \t]*/, ""); map($0); next }
-    fm == 1 { in_list = 0 }
-    fm == 1 && /^tools:/ {
-      has_tools = 1; v = $0; sub(/^tools:[ \t]*/, "", v)
-      if (v == "") { in_list = 1; next }
-      n = split(v, parts, ","); for (i = 1; i <= n; i++) map(parts[i]); next
-    }
-    fm == 1 && /^(model|color):/ { next }
-    { print }
-  ' "$1"
+  awk -f "$SELF_DIR/lib/convert-agent.awk" "$1"
 }
 
 say "Dựng plugin $NAME (${#SKILLS[@]} skill, ${#AGENTS[@]} agent)"
