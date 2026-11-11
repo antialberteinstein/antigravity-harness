@@ -131,6 +131,11 @@ mkdir -p "$G/config/plugins/claude-style" "$G/config/plugins/off-style"
 echo '{"hooks":{"PreToolUse":[]}}' > "$G/config/plugins/claude-style/hooks.json"
 echo '{"hooks":{"Stop":[]}}' > "$G/config/plugins/off-style/hooks.json"
 echo '{"plugins":{"off-style":{"enabled":false}}}' > "$G/config/config.json"
+cp "$S" "$TMP/s.json"; jq --arg h "$H" '.trustedWorkspaces = [$h, "\($h)/work/proj"]' "$TMP/s.json" > "$S"
+out=$(run --os fedora --only validate)
+check "validate: cảnh báo tin cả thư mục HOME"        has "$out" "trustedWorkspaces có cả thư mục HOME"
+check "validate: không cảnh báo project con của HOME" hasnt "$out" "trustedWorkspaces có cả thư mục HOME ($H/work"
+cp "$TMP/s.json" "$S"
 out=$(run --os fedora --only validate)
 check "validate: báo thiếu statusline.sh"             has "$out" "thiếu ~/.gemini/statusline.sh"
 check "validate: thấy notify.sh của hook"             has "$out" "✓ ~/.gemini/scripts/notify.sh"

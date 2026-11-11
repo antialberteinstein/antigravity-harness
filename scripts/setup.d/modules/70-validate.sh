@@ -5,6 +5,7 @@ step_validate() {
   _validate_commands
   _validate_plugin_hooks
   _validate_duplicate_skills
+  _validate_trust
 }
 
 # GEMINI.md: có, không vượt 24 KB (agy cắt bớt phần thừa), các include @[..](..) trỏ tới file có thật
@@ -74,4 +75,17 @@ _validate_duplicate_skills() {
     dup=1
   done
   (( dup == 0 )) && ok "không skill lẻ nào trùng skill của plugin"
+}
+
+# Tin cả thư mục HOME thì mọi repo clone về dưới đó được tự tin tưởng: plugin, MCP và hook trong
+# .agents/ của repo lạ sẽ chạy mà không hỏi
+_validate_trust() {
+  [[ -f "$CLI_SETTINGS" ]] || return 0
+  local home="${HOME%/}"
+  if jq -e --arg h "$home" '(.trustedWorkspaces // []) | map(rtrimstr("/")) | index($h)' "$CLI_SETTINGS" >/dev/null 2>&1; then
+    warn "trustedWorkspaces có cả thư mục HOME ($(tilde "$home")): repo lạ dưới HOME sẽ tự chạy plugin, MCP, hook trong .agents/"
+    note "bỏ $home khỏi trustedWorkspaces trong $(tilde "$CLI_SETTINGS"); agy sẽ hỏi tin từng project"
+  else
+    ok "trustedWorkspaces không gồm cả thư mục HOME"
+  fi
 }
