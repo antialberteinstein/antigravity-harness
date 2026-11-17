@@ -110,7 +110,7 @@ JSON
 out=$(run --os darwin --only settings)
 check "settings: giữ model và trustedWorkspaces"      jqt '.model == "Gemini 3.8 Flash (Medium)" and .trustedWorkspaces == ["/private/proj"]' "$S"
 check "settings: giá trị harness thắng"               jqt '.colorScheme == "tokyo night" and .statusLine.command == "bash ~/.gemini/statusline.sh"' "$S"
-check "settings: giữ quy tắc allow của người dùng"     jqt '.permissions.allow == ["command(make test)", "mcp(context7/*)"]' "$S"
+check "settings: giữ quy tắc allow của người dùng"     jqt '.permissions.allow | .[0] == "command(make test)" and index("mcp(context7/*)") != null and index("command(git status)") != null' "$S"
 check "settings: thêm quy tắc ask của harness"         jqt '.permissions.ask | index("command(git push)")' "$S"
 check "settings: deny không bị lặp"                    jqt '[.permissions.deny[] | select(. == "command(rm -rf)")] | length == 1' "$S"
 check "settings: thay @HOME@ bằng HOME"                jqt ".permissions.deny | index(\"read_file($H/.ssh)\")" "$S"
@@ -301,6 +301,24 @@ check "guard: .envrc không bị nhầm là .env"          [ -z "$out" ]
 out=$(printf 'không phải json' | env -i PATH="/usr/bin:/bin" bash "$GS"); rc=$?
 check "guard: input hỏng thì im lặng, exit 0"        [ -z "$out" -a "$rc" -eq 0 ]
 check "hooks.json gắn guard-secrets vào PreToolUse"  jqt '.["harness-guard-secrets"].PreToolUse[0].hooks[0].command | test("guard-secrets.sh")' "$REPO/config/hooks.json"
+
+# ── guard-rm.sh (hook PreToolUse) ────────────────────────────────────
+GR="$REPO/scripts/guard-rm.sh"
+gr() { jq -nc --arg c "$1" '{toolCall:{name:"run_command",args:{CommandLine:$c}}}' | env -i PATH="/usr/bin:/bin" bash "$GR"; }
+for c in 'rm -rf d' 'rm -fr d' 'rm -r -f d' 'rm -Rf d' '/bin/rm -rf d' 'rm -r d' 'true && rm -rf d' \
+         'sudo rm -rf /tmp/x' '\rm -rf d' 'bash -c "rm -rf d"' 'ls | xargs rm -r' 'cd /tmp; rm --recursive d' \
+         'echo $(rm -rf d)' 'find . -name x -delete' 'find . -exec rm -rf {} \;' $'ls\nrm -rf d'; do
+  out=$(gr "$c")
+  check "guard-rm: chặn  $c"                          jq -e '.decision == "deny"' <<<"$out"
+done
+for c in 'rm file.txt' 'rm -f a.o b.o' 'git rm -r --cached build' 'ls -R; rm x' 'rmdir d' 'npm run format' \
+         'find . -name "*.go"' 'grep -r foo .' 'rm -- -r'; do
+  out=$(gr "$c")
+  check "guard-rm: cho qua  $c"                       [ -z "$out" ]
+done
+out=$(printf 'không phải json' | env -i PATH="/usr/bin:/bin" bash "$GR"); rc=$?
+check "guard-rm: input hỏng thì im lặng, exit 0"     [ -z "$out" -a "$rc" -eq 0 ]
+check "hooks.json gắn guard-rm vào run_command"      jqt '.["harness-guard-rm"].PreToolUse[0] | .matcher == "run_command" and (.hooks[0].command | test("guard-rm.sh"))' "$REPO/config/hooks.json"
 
 # ── Skill /harness-check của harness ─────────────────────────────────
 HC="$REPO/config/skills/harness-check/SKILL.md"

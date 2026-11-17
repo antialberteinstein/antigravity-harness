@@ -21,5 +21,19 @@
         ]
       }
     ]
+  },
+  "harness-guard-rm": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.gemini/scripts/guard-rm.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

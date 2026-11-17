@@ -10,7 +10,23 @@
   },
   "permissions": {
     "allow": [
-      "mcp(context7/*)"
+      "mcp(context7/*)",
+      "command(ls)",
+      "command(pwd)",
+      "command(which)",
+      "command(tree)",
+      "command(wc)",
+      "command(uname)",
+      "command(git status)",
+      "command(git log)",
+      "command(git diff)",
+      "command(git show)",
+      "command(go version)",
+      "command(go env)",
+      "command(node -v)",
+      "command(node --version)",
+      "command(npm -v)",
+      "command(python3 --version)"
     ],
     "ask": [
       "command(git push)",
