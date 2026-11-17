@@ -18,8 +18,9 @@ Supported: macOS and Fedora.
 | Plugins | [Superpowers](https://github.com/obra/superpowers), [Karpathy guidelines](https://github.com/multica-ai/andrej-karpathy-skills) and [kessie-skills](https://github.com/antialberteinstein/kessie-skills), installed from git by `agy-sync` |
 | [ECC](https://github.com/affaan-m/ECC) (selected) | A local `ecc-selected` plugin with 17 skills and 13 reviewer/resolver agents, converted to Antigravity subagents. The full `ecc` plugin is disabled (not removed). ECC hooks are left out: they are written for Claude Code |
 | `GEMINI.md` | Load the Karpathy guidelines before coding; run tests before calling a task done; use `gh`, `hf`, `kaggle`, `uv` instead of guessing; ask before adding CI that runs e2e tests. |
-| Permissions (`agy`) | Auto mode in the terminal sandbox; `~/.ssh`, the Antigravity sign-in token and `~/.claude.json` denied; anything that pushes data out (`git push`, PRs, releases, uploads) asks first |
+| Permissions (`agy`) | Auto mode in the terminal sandbox; `~/.ssh`, the Antigravity sign-in token and `~/.claude.json` denied; anything that pushes data out (`git push`, PRs, releases, uploads) asks first; read-only commands (`ls`, `git status/log/diff/show`, version checks) are allowed so `/plan` mode does not ask for each one |
 | Secret guard | A `PreToolUse` hook stops file tools from reading or editing `.env` and `.env.*` in any folder (`.env.example`, `.sample`, `.template` stay readable), in the IDE, app and `agy` |
+| Delete guard | A `PreToolUse` hook on `run_command` blocks recursive deletes: `rm` with `-r`/`-R`/`--recursive` in any flag order or path (`/bin/rm`, `sudo rm`, inside `bash -c`, `xargs`, `find -exec`) and `find -delete`. Single-file `rm` and `git rm -r` still run |
 | MCP | Context7 for up-to-date library docs, in the shared `mcp_config.json` |
 | Statusline (`agy`) | Lualine-style: Vim or agent mode, git branch, directory, quota used, context bar, model |
 | Notifications | `agy`: built-in bell and desktop notification. IDE and app: a `Stop` hook sends a system notification when the agent finishes |
@@ -29,7 +30,7 @@ Supported: macOS and Fedora.
 | File in this repo | Read by | Notes |
 | --- | --- | --- |
 | `GEMINI.md` | IDE, app, `agy` | Global rules. The 24 KB per-file cap includes `@[..](..)` includes |
-| `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, finish notification |
+| `config/hooks.json` | IDE, app, `agy` | Shared lifecycle hooks: secret guard, delete guard, finish notification |
 | `config/skills/harness-check/`, `config/skills/setup-agy-project/` | IDE, app, `agy` | The `/harness-check` and `/setup-agy-project` skills |
 | `agy-settings.json` | `setup.sh` | Merged into `~/.gemini/antigravity-cli/settings.json` (see below) |
 | `statusline.sh` | `agy` | Custom status line |
@@ -96,6 +97,8 @@ Machine-specific overrides for setup and `agy-sync` go in `scripts/setup.d/confi
 - `agy` permission rules take absolute paths only: a relative rule such as `read_file(.env)` makes the terminal sandbox reject every command (`non-absolute file path`). That is why `.env` is guarded by a hook, and why `REMOVE_PERMISSIONS` in `config.sh` strips rules the harness no longer wants (the merge otherwise only adds).
 - agy's terminal sandbox cannot read `~/.gemini`, so the harness skills run their scripts outside it (agy asks first). A slash command also reaches the agent without the skill's path, which is why these skills spell out `~/.gemini/...` paths.
 - The secret guard covers file tools, not shell commands such as `cat .env`, the same as claude-harness's `Read` deny rules.
+- `command(...)` rules match by prefix, so a deny rule such as `command(rm -rf)` misses `rm -fr`, `rm -r -f` or `/bin/rm -rf`; that is why recursive deletes are guarded by a hook. The hook also blocks text like `echo "rm -rf"`, and it cannot catch every way to delete (for example Python's `shutil.rmtree`).
+- `/plan` mode has no automatic approval: any command not in `permissions.allow` asks, even inside the sandbox. Switch back to Auto mode (Shift+Tab) once the plan is approved.
 - Auto mode needs the terminal sandbox and is not offered on business or enterprise accounts.
 
 ## License
